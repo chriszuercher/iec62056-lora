@@ -1,5 +1,5 @@
 size_t const MAX_MESSAGE_LENGTH = 256;
-#include <HardwareSerial.h>
+#include <softSerial.h>
 
 namespace logger
 {
@@ -13,7 +13,7 @@ enum Level
   Debug,
 };
 
-void set_serial(HardwareSerial &serial);
+void set_serial(softSerial &serial);
 
 void set_level(Level level);
 

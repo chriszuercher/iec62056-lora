@@ -4,6 +4,7 @@
 #include "meter.h"
 #include "logger.h"
 #include "credentials.h"
+#include <softSerial.h>
 
 #define INT_GPIO USER_KEY
 
@@ -19,8 +20,10 @@ uint32_t sleepTime = 1200000;
 #define MAXBATT 3400
 #define MINBATT 3280
 
+softSerial mySerial(GPIO5, GPIO0);//TX, RX
+
 /* METER para */
-static MeterReader reader(Serial1);
+static MeterReader reader(Serial);
 double power = 0;
 double totalkWh = 0;
 unsigned int uptimeCount = 0;
@@ -125,7 +128,7 @@ bool checkUserAt(char * cmd, char * content) {
     } else {
       logger::set_level(logger::Error);
     }
-    Serial.println("Log Level Changed");
+    mySerial.println("Log Level Changed");
     return true;
   } else if (strcmp(cmd, "SleepTime") == 0) {
     sleepTime = (uint32_t) (atoi(content) * 1000);
@@ -138,13 +141,13 @@ bool checkUserAt(char * cmd, char * content) {
 
 void downLinkDataHandle(McpsIndication_t *mcpsIndication)
 {
-  Serial.printf("+REV DATA:%s,RXSIZE %d,PORT %d\r\n", mcpsIndication->RxSlot ? "RXWIN2" : "RXWIN1", mcpsIndication->BufferSize, mcpsIndication->Port);
-  Serial.print("+REV DATA:");
+  mySerial.printf("+REV DATA:%s,RXSIZE %d,PORT %d\r\n", mcpsIndication->RxSlot ? "RXWIN2" : "RXWIN1", mcpsIndication->BufferSize, mcpsIndication->Port);
+  mySerial.print("+REV DATA:");
   for (uint8_t i = 0; i < mcpsIndication->BufferSize; i++)
   {
-    Serial.printf("%02X", mcpsIndication->Buffer[i]);
+    mySerial.printf("%02X", mcpsIndication->Buffer[i]);
   }
-  Serial.println();
+  mySerial.println();
 
   if (mcpsIndication->Port == 4) {
     int newSleepTime = mcpsIndication->Buffer[1] | (mcpsIndication->Buffer[0] << 8);
@@ -217,7 +220,7 @@ static void prepareTxFrame( uint8_t port )
 void onWakeUp() {
   delay(10);
   if (digitalRead(INT_GPIO) == 0) {
-    Serial.println("Woke up by GPIO");
+    mySerial.println("Woke up by GPIO");
     // resetRetryTime();
     // deviceState = DEVICE_STATE_SEND; // DEBUGME: After the button is pressed direclty read data from the smart-meter
   }
@@ -236,13 +239,13 @@ void resetRetryTime() {
 }
 
 void setup() {
-  Serial.begin(115200);
+  mySerial.begin(9600);
 
-  logger::set_serial(Serial);
+  logger::set_serial(mySerial);
   logger::set_level(logger::DEFAULT_LOG_LEVEL);
 
-  Serial1.begin(INITIAL_BAUD_RATE, PARITY_SETTING);
-  Serial1.setTimeout(10);
+  Serial.begin(INITIAL_BAUD_RATE, PARITY_SETTING);
+  Serial.setTimeout(10);
 
   pinMode(Vext, OUTPUT);
   pinMode(INT_GPIO, INPUT);

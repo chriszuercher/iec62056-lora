@@ -55,7 +55,7 @@ void MeterReader::start_reading() {
     return;
   }
   startTime_ = millis();
-  Serial1.updateBaudRate(INITIAL_BAUD_RATE);
+  Serial.updateBaudRate(INITIAL_BAUD_RATE);
 
 
   // Hack: Sometimes it seems as there is already some data in the rx buffer thus let's clear it.
@@ -63,7 +63,7 @@ void MeterReader::start_reading() {
   // The only way to stop the loop is by manually pressing the meter's menu button many times to navigate through all the obis values till you reach END (ETX).
   // Thus I also added a timeout check here
   logger::debug("Clear serial buffer");
-  while (Serial1.read() >= 0) {
+  while (Serial.read() >= 0) {
     logger::debug(".");
     if (startTime_ + (2 * 1000) < millis()) {
       change_status(TimeoutError);
@@ -80,16 +80,16 @@ void MeterReader::start_reading() {
 void MeterReader::send_request() {
   logger::debug("Step -> send_request");
   logger::debug(START_SEQUENCE);
-  Serial1.write(START_SEQUENCE);
-  Serial1.flush();
+  Serial.write(START_SEQUENCE);
+  Serial.flush();
   step_ = RequestSent;
 }
 
 void MeterReader::read_identification() {
   logger::debug("Step -> read_identification");
-  Serial1.setTimeout(SERIAL_IDENTIFICATION_READING_TIMEOUT);
+  Serial.setTimeout(SERIAL_IDENTIFICATION_READING_TIMEOUT);
   static char identification[MAX_IDENTIFICATION_LENGTH];
-  size_t len = Serial1.readBytesUntil('\n', identification, MAX_IDENTIFICATION_LENGTH);
+  size_t len = Serial.readBytesUntil('\n', identification, MAX_IDENTIFICATION_LENGTH);
   logger::debug("identification=%s", identification);
   if (len < 6) {
     logger::err("ident too short (%u chars)\n", len);
@@ -125,18 +125,18 @@ void MeterReader::switch_baud() {
   logger::debug("Step -> switch_baud");
   BaudSwitchParameters params = baud_char_to_params(baud_char_);
   if (params.send_acknowledgement) {
-    Serial1.printf(ACK "0%c0\r\n", baud_char_);
-    Serial1.flush();
+    Serial.printf(ACK "0%c0\r\n", baud_char_);
+    Serial.flush();
   }
   delay(50); // TODO is this needed?
 
   if (params.new_baud) {
     logger::debug("switching to %d bps", params.new_baud);
-    Serial1.updateBaudRate(params.new_baud);
+    Serial.updateBaudRate(params.new_baud);
   } else {
-    Serial1.updateBaudRate(INITIAL_BAUD_RATE);
+    Serial.updateBaudRate(INITIAL_BAUD_RATE);
   }
-  Serial1.setTimeout(SERIAL_READING_TIMEOUT);
+  Serial.setTimeout(SERIAL_READING_TIMEOUT);
   step_ = InData;
   /* Start with checksum=STX to avoid having to avoid xoring it */
   checksum_ = STX;
@@ -144,7 +144,7 @@ void MeterReader::switch_baud() {
 
 void MeterReader::read_line() {
   static char line[MAX_LINE_LENGTH];
-  size_t len = Serial1.readBytesUntil('\n', line, MAX_LINE_LENGTH);
+  size_t len = Serial.readBytesUntil('\n', line, MAX_LINE_LENGTH);
   if (len == MAX_LINE_LENGTH) {
     logger::warn("probably truncated a line, expect a checksum error");
     return;
@@ -200,7 +200,7 @@ void MeterReader::verify_checksum() {
 #ifndef SKIP_CHECKSUM_CHECK
   /* Expecting ETX and then the checksum */
   uint8_t etx_bcc[2];
-  if (Serial1.readBytes(etx_bcc, 2) != 2 || etx_bcc[0] != ETX) {
+  if (Serial.readBytes(etx_bcc, 2) != 2 || etx_bcc[0] != ETX) {
     logger::warn("failed to read checksum");
     change_status(ProtocolError);
     return;

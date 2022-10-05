@@ -3,16 +3,16 @@
 #include <cstdio>
 #include <cstring>
 #include "logger.h"
-#include <HardwareSerial.h>
+#include <softSerial.h>
 
 namespace logger
 {
 
 Level log_level = None;
 
-HardwareSerial serialOut = NULL;
+softSerial serialOut(GPIO5, GPIO0);//TX, RX
 
-void set_serial(HardwareSerial &serial) {
+void set_serial(softSerial &serial) {
   serialOut = serial;
 }
 
@@ -21,7 +21,7 @@ void set_level(Level level) {
 }
 
 void serialPrintf(char const *level_name, char const *message) {
-  if (serialOut != NULL)
+  //if (serialOut != NULL)
     serialOut.printf("%s: %s\n", level_name, message);
 }
 
